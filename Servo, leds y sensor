@@ -1,0 +1,97 @@
+//Giancarlo Rosa - 22709
+//Electrónica Digital 2
+//Proyecto 1
+
+//Librerías
+
+#include <Arduino.h>
+
+//Variables globales
+
+const int lm35_pin = 34;  
+const int Boton_pin = 5;
+int Boton_state = 0;
+float temperaturaC = 0.0; 
+
+const int led_v = 15;  
+const int led_a = 2;  
+const int led_r = 4;  
+
+//Servo 
+
+#define Servo_pin 19
+#define canalPWM 1
+#define frequency 50
+#define resolution 12
+
+//funciones prototipo
+
+void initPWM(void);
+void moverServo(int ang);
+
+void setup() {
+
+  Serial.begin(115200);
+  pinMode(lm35_pin, INPUT);
+  pinMode(Boton_pin, INPUT_PULLUP); 
+
+  pinMode(led_v, OUTPUT);
+  pinMode(led_a, OUTPUT);
+  pinMode(led_r, OUTPUT);
+
+  digitalWrite(led_v, LOW);
+  digitalWrite(led_a, LOW);
+  digitalWrite(led_r, LOW); 
+
+  initPWM();
+
+}
+
+void loop() {
+  Boton_state = digitalRead(Boton_pin);
+
+  if (Boton_state == LOW) {  // Si el botón está presionado porque está en pullup
+    int analogValue = analogRead(lm35_pin);
+    
+    // Convertir la lectura analógica a temperatura en grados Celsius
+
+    float voltaje = analogValue * (3.3 / 4095.0); // Conversión a voltaje con regla de 3 (3.3V referencia, ADC de 12 bits)
+    temperaturaC = voltaje * 100.0 + 11;        // LM35 entrega 10mV/°C y se le suma 13 para corrección del sensor chino
+    
+    Serial.print("Temperatura: ");
+    Serial.print(temperaturaC);
+    Serial.println(" ºC");
+
+    if (temperaturaC < 22.0) {
+        digitalWrite(led_v, HIGH);
+        digitalWrite(led_a, LOW);
+        digitalWrite(led_r, LOW); 
+        moverServo(0);
+        
+    } else if (temperaturaC >= 22.0 && temperaturaC <= 25.0) {
+        digitalWrite(led_v, LOW);
+        digitalWrite(led_a, HIGH);
+        digitalWrite(led_r, LOW); 
+        moverServo(90);
+
+    } else if (temperaturaC > 25.0) {
+        digitalWrite(led_v, LOW);
+        digitalWrite(led_a, LOW);
+        digitalWrite(led_r, HIGH);
+        moverServo(180);
+    }
+
+    delay(500); 
+  }
+}
+
+void initPWM(void){
+    ledcSetup(canalPWM, frequency, resolution);
+    ledcAttachPin(Servo_pin, canalPWM);
+    ledcWrite(canalPWM, 0); 
+}
+
+void moverServo(int ang) {
+  int duty = map(ang, 0, 180, 205, 410);
+  ledcWrite(canalPWM, duty);
+}
